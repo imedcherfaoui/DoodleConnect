@@ -6,40 +6,25 @@ import {
   FIREBASE_AUTH,
   FIREBASE_DB,
 } from "../../../../../firebase/firebaseConfig";
-import ColorPicker, {
-  Panel1,
-  Swatches,
-  Preview,
-  OpacitySlider,
-  HueSlider,
-} from "reanimated-color-picker";
 
 function SketchBoard() {
   const canvasRef = useRef(null);
   const [drawingPaths, setDrawingPaths] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [currentColor, setCurrentColor] = useState("#000");
 
   useEffect(() => {
-    const fetchDrawings = async () => {
-      try {
-        const querySnapshot = await getDocs(
-          collection(FIREBASE_DB, "drawings")
-        );
-        const drawingData = querySnapshot.docs.map((doc) => ({
+    const unsubscribe = onSnapshot(
+      collection(FIREBASE_DB, "drawings"),
+      (snapshot) => {
+        const drawingData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setDrawingPaths(drawingData);
-      } catch (error) {
-        console.error("Error fetching drawings:", error);
       }
-    };
+    );
 
-    fetchDrawings();
+    return () => unsubscribe();
   }, []);
-
-  console.log(drawingPaths);
 
   const addPathsToCanvas = () => {
     drawingPaths.forEach((drawing) => {
@@ -55,6 +40,7 @@ function SketchBoard() {
     });
   };
 
+  // Mettre à jour le canvas à chaque changement de drawingPaths
   useEffect(() => {
     addPathsToCanvas();
   }, [drawingPaths]);
@@ -108,36 +94,22 @@ function SketchBoard() {
     setCurrentColor(hex);
   };
 
-  /*   console.log(drawingPaths[0]?.paths[0]);
-   */ return (
+  console.log("drawingPaths", drawingPaths);
+  console.log("canvasRef", canvasRef);
+
+  return (
     <View style={styles.container}>
       <Canvas
         ref={canvasRef}
         height={400}
-        color={currentColor}
+        color="red"
         thickness={20}
         opacity={0.6}
         style={{ backgroundColor: "lightgray" }}
       />
-      <Button title="Color Picker" onPress={() => setShowModal(true)} />
       <Button title="Undo" onPress={handleUndo} />
       <Button title="Save" onPress={handleSaveDrawing} />
       <Button title="Clear" onPress={handleClear} />
-      <Modal visible={showModal} animationType="slide">
-        <ColorPicker
-          style={{ width: "100%" }}
-          value={currentColor}
-          onComplete={onSelectColor}
-        >
-          <Preview />
-          <Panel1 />
-          <HueSlider />
-          <OpacitySlider />
-          <Swatches />
-        </ColorPicker>
-
-        <Button title="Ok" onPress={() => setShowModal(false)} />
-      </Modal>
     </View>
   );
 }
